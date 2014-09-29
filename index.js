@@ -1,4 +1,35 @@
 
+/*
+  module_require = require('module').require
+
+  pmod.engine.js = pmod.engine.node = function (filename) {
+    return new Promise(function (resolve, reject) {
+      try {
+        resolve(require(filename));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  };
+
+  pmod.engine["jeml"] = function () {};
+
+  pmod.engine["jisp"] = function () {};
+
+
+  pmod.import("name").then
+
+  // node-resolve
+
+  jeml.import(__dirname + "/name.jeml").then(function () {
+
+
+  });
+
+*/
+
+var resolve = require('resolve');
+
 var fs = require("fs")
   , path = require("path")
   , Module = require("module")
@@ -33,10 +64,9 @@ pmod.load = function (filename) {
             // first time loading
             if (!(filename in load_resolvers)) {
                 load_resolvers[filename] = [];
-                
-                fs.readFile(filename, function (err, file) {
-                    if (err) throw err;
-                    pmod.define(filename, file.toString());
+
+                pmod.get(filename).then(function (text) {
+                    pmod.define(filename, text);
                 });
             }
             load_resolvers[filename].push(resolve);
@@ -70,16 +100,11 @@ pmod.import = function (filename) {
             if (!(filename in import_resolvers)) {
                 import_resolvers[filename] = [];
 
-
-
-                pmod.load(filename).then(function (file) {
+                pmod.get(filename).then(function (text) {
 
                     var __dirname = path.dirname(filename);
                     var __filename = filename;
                     var $import = function (filepath) {
-
-//                        console.log("$import", filepath);
-
                         if (filepath[0] === ".") {
                             return pmod.import(path.resolve(__dirname, filepath));
                         } else if (filepath[0] === "/") {
@@ -99,7 +124,7 @@ pmod.import = function (filename) {
 
                     var $module = new Module(filename);
 
-                    var script = new Function("$load", "$import", "$export", "__dirname", "__filename", "require", file);
+                    var script = new Function("$load", "$import", "$export", "__dirname", "__filename", "require", text);
                     script($load, $import, $export, __dirname, __filename, $module.require.bind($module));
                 });
             }
@@ -108,7 +133,32 @@ pmod.import = function (filename) {
     });
 };
 
+// used for import js file
+pmod.engine("js", function () {
+
+});
+
+pmod.engine("html", function () {
+
+});
+
+// defult engines for .js and .node
+pmod.engine.js = function () {
+
+};
+
+pmod.engine.node = function () {
+
+};
+
+// get file, return a promise
+// may support http request
+pmod.get = function (filename) {
+    return new Promise(function (resolve, reject) {
+        fs.readFile(filename, function (err, file) {
+            err ? reject(err) : resolve(file.toString());
+        });
+    });
+};
+
 module.exports = pmod;
-
-
-
